@@ -56,7 +56,9 @@ plot_mi_scores(mi_scores)
 
 ### 5、map（）
 
-只有series数据可以用map方法，DataFrame数据没有map方法，此时只能用apply，如 data.apply(lambda x:x.map(...))。apply的作用机理是分别传入数据的每一个列(请注意，是整列数据而不是列名)作为x，然后应用函数变换。
+只有series数据可以用map方法，DataFrame数据没有map方法，此时只能用apply，如 data.apply(lambda x:x.map(...))需要注意的是，map方法是主元素操作，比如data.map(frac)表示对该列中的每一个元素操作，frac函数接收到的参数实际上是单个元素值。
+
+series数据和dataframe数据都有apply方法，一个是取出每个元素操作，一个是取出每个列操作。apply的作用机理是分别传入数据的每一个列(请注意，是整列数据而不是列名)作为x，然后应用函数变换。
 
 
 
@@ -112,7 +114,7 @@ data.drop_duplicates() 会删除完全相同的行
 data.rename(columns={'Personality': 'match_p'})
 ```
 
-重命名列
+重命名列，columns参数不要忘记加。
 
 
 
@@ -301,7 +303,7 @@ transform可以保持变换前后的形状，会广播回原形状，一般用�
 data.rename(columns={"a":"b"})
 ```
 
-
+重命名列，columns参数不要忘记加。
 
 ### 31、fillna()
 
@@ -379,11 +381,255 @@ all_data["Post_frequency"].fillna(all_data["Post_frequency"].median(),inplace=Tr
 
 
 
+### 37、corrwith()
+
+```python
+data[features].corrwith(F1)
+```
+
+代码表示计算取出  data  中的特征列与特征  F1  之间的皮尔逊相关系数，只能计算线性关系的强弱。
 
 
 
+### 38、目标编码
+
+平均编码（bin计数），利用某特征信息，对数据进行分组聚合，对每组分别应用编码。
+
+```python
+autos["make_encoded"] = autos.groupby("make")["price"].transform("mean")
+
+```
+
+但是缺点是当某类别数较少时，平均值会不稳定，引入噪声。因此我们引入了平滑参数m，公式如下。其中m表示平滑参数，nc表示当前类别数，mean（c）表示该类别的平均目标值，global mean表示全局平均值。m越大编码值越偏向于全局平均值，更保守。m越小，结果越接近类别平均值，越容易受到噪声影响。
+$$
+\text{encoding}(c) = \frac{n_c}{n_c + m} \cdot \text{mean}(c) + \frac{m}{n_c + m} \cdot \text{global mean}
+$$
+下面是目标编码的使用场景高基数特征，指某个分类特征有很多的类别，比如邮政编码，用户id等，此时如果使用独热编码，数据特征会变得庞大，如果使用标签编码，会产生顺序关系。如果  id  只是唯一标识符就直接去掉，如果id有意义（用于ID，设备ID，时间ID等），那么我们选择做特征工程而不直接使用。另一个场景是，根据经验可以知道强相关的特征，如汽车品牌和价格。
+
+```python
+encoder = MEstimateEncoder(cols=["Neighborhood"],m=1.)  # 告诉编码器要对该列进行编码
+encoder.fit(X_encode,y_encode)
+
+# Encode the training split
+X_train = encoder.transform(X_pretrain, y_train)
+
+```
 
 
+
+### 39、index_col
+
+```python
+df = pd.read_csv("data.csv", index_col=0)
+
+```
+
+读取csv文件时，有参数 index_col，该参数会指定选取哪一列当作默认索引，这样就不会创建额外的索引。
+
+
+
+### 40、DataFrame 本质
+
+DataFrame 本质上是一个二维表格，有行和列。在创建该表格时，pandas需要知道有多少行和每列的数据是什么。如果传入标量，pandas不知道应该应该创建多少行，因为标量只是单个值，不是列表等可迭代对象，此时我们应该传入index参数以明确告诉它应该创建几行，比如index=[0]表示只有一行。
+
+
+
+### 41、pd数据访问列名
+
+使用 "." 进行访问数据，如 data.columns_name 时，列名必须符合python变量的命名规则（不能有空格、标点、数字开头），而且如果列名和 DataFrame的方法名冲突时该方法就会失效。
+
+使用data[column_name]的方法中规中矩，值得信赖。
+
+
+
+### 42、set_index()
+
+data.set_index(name)   会把数据中的某一列视为新的索引，并返回一个i虚拟的DataFrame数据，不过也有inplace参数来控制是否就地修改。
+
+
+
+### 43、访问数据
+
+pandas 访问数据时，可以使用loc和iloc来访问。其中，loc[]可以接收布尔类型值，表示选取布尔值为真的行。
+
+
+
+### 44、isin()
+
+会返回一个布尔值，表示数据是否在列表中,如data["ID"].isin(["124"])
+
+
+
+### 45、isna()和notna()
+
+则会返回数据是否为缺失值的布尔矩阵，你应该能看懂。
+
+
+
+### 46、apply
+
+该方法会对数据中的每一列（默认）或者每一行数据调用frac方法。data.apply(frac，axis=0)，当axis=0表示对每一列处理，axis=1表示对每一行处理。不论是map、还是apply，他们都不会修改原始的表格数据，反而会返回一个新的表格数据。
+
+
+
+### 47、squeeze()
+
+data.squeeze()可以把一行或者一列的dataframe数据展开成series数据。
+
+
+
+### 48、idxmax()
+
+pd的series数据有方法idxmax()可以返回最大值对应的标签索引，可以直接用loc来访问对应行。
+
+
+
+### 49、链式比较
+
+这是python特有的特性，例如 9<x<3。
+
+
+
+### 50、series
+
+该类型数据也是有列属性的，毕竟所谓dataframe就是由一个个series堆叠起来的。如果说我们想对某一列做相同的变换，就用 axis=0,如果我们想筛选有特殊条件的行，就用 axis=1
+
+
+
+### 51、agg（）
+
+agg（）方法允许你在dataframe数据上运行多种函数，一般还是用在分组聚合上面。
+
+```python
+reviews.groupby(['country']).price.agg([len, min, max])
+
+```
+
+
+
+### 52、reset_index()
+
+data.reset_index()会把数据恢复到原来的索引，一般用于分组数据处理完后恢复到原形状。
+
+
+
+### 53、groupby()
+
+data.groupby(col)对数据进行分组聚合之后，会返回一个按照索引col排列的dataframe数据（不是按照索引在数据集中出现的顺序，而是按照索引的大小）。
+
+
+
+### 54、sort_index（）
+
+该方法会按照索引进行排序，可以解决  groupby（）出现的问题。
+
+```python
+countries_reviewed.sort_index()
+```
+
+```python
+# 如果两个数据有相同索引，并且都表示同一事物，那么join！
+
+powerlifting_combined = powerlifting_meets.set_index("MeetID").join(powerlifting_competitors.set_index("MeetID"))
+
+```
+
+
+
+### 55、sort_values（）
+
+该方法既依据一个列可以对数据进行排序，也可以依据多个列进行排序，此时优先级是从前到后。==并且主要参数by是dataframe的参数，series数据没有该参数。==
+
+```python
+countries_reviewed.sort_values(by=['country', 'len'])
+
+```
+
+
+
+### 56、size（）与count（）
+
+data.groupby(target_col)之后，如果使用  count（）方法，他会对dataframe中的每列都做计数，即统计非缺失值的数量。如果使用 size（）方法，则会单纯的统计每一组有多行，返回一个  series  数据。
+
+
+
+### 57、dtype和dtypes属性
+
+你可以使用  dtype  属性获取特定列的值的类型。而dtypes属性则会获取所有列的属性。
+
+```python
+data.target.dtype
+data.dtypes
+```
+
+
+
+### 58、缺失值
+
+NAN 即  not a number ，其实更多的是指 not value ，表示值缺失，不仅可以表示数值的缺失，也可以表示非数值的缺失。
+
+替换缺失值，最简单的方式就是 data.fillna("Unknown") 。此外，还可以通过replace（）方法便捷地替换缺失值,即  data.replace（A，B）,用B替代A。
+
+
+
+### 59、astype（）
+
+该方法可以快速转变数据类型，需要注意的是他不是就地转换。
+
+
+
+### 60、value_counts（）
+
+data.value_counts（）本身就有参数 ascending用于控制升序还是降序。
+
+
+
+### 61、rename（）
+
+```python
+reviews.rename(columns={'points': 'score'})
+```
+
+该函数用于将列名更改为我们满意的名字。
+
+```python
+reviews.rename(index={0: 'firstEntry', 1: 'secondEntry'})
+```
+
+此外，你也可以通过  index  参数对行名进行重命名。
+
+
+
+### 62、rename_axis（）
+
+```python
+reviews.rename_axis("wines", axis='rows').rename_axis("fields", axis='columns')
+```
+
+该方法会重命名索引的标签名字
+
+
+
+### 63、拼接数据
+
+第一种方法是 concat（）方法，他可以对数据进行横向拼接和纵向拼接。
+
+```python
+pd.concat((data1,data2),axis)
+```
+
+第二种是 join（）方法，更加灵活。join（）大默认方法是左拼接，以左侧的索引为基准，参数how可以指定拼接的方式。参数  lsuffix  表示原数据如果与新数据列名重复，就在列名后加上该字符串表示区分， rshuffix表示新数据如果与原数据列名重复，就在列名后加上该字符串表示区分。
+
+| how       | 含义                                                         |
+| --------- | ------------------------------------------------------------ |
+| `"left"`  | 左连接（默认），保留左 DataFrame 的所有索引，右 DataFrame 的数据可能补 NaN |
+| `"right"` | 右连接，保留右 DataFrame 的所有索引                          |
+| `"outer"` | 外连接，保留两边所有索引，缺失部分补 NaN                     |
+| `"inner"` | 内连接，只保留两边都匹配的索引                               |
+
+```python
+left.join(right, lsuffix='_CAN', rsuffix='_UK')
+```
 
 
 
