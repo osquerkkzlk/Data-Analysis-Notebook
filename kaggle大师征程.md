@@ -633,7 +633,105 @@ left.join(right, lsuffix='_CAN', rsuffix='_UK')
 
 
 
+### 64、np.product()
 
+np.product(data.shape)会计算元素的乘积。
+
+
+
+### 65、处理缺失值
+
+首先是观察数据，并分析数据缺失的原因：此值丢失是因为它没有被记录还是因为它不存在。如果一些值因为不存在而丢失，那么尝试猜测它可能是没有意义的。如果某个值因为没有记录而丢失，那么可以尝试根据该列和行中的其他值来猜测他可能是什么，这就是插补技术。
+
+data.dropna（axis=1）表示删除有缺失值的列，==该axis参数是反直觉的==，其他的axis参数则是正常的。
+
+data.fillna()直接填充缺失值
+
+data.fillna(method='bfill', axis=0).fillna(0) 表示用同一列后面一个非缺失值填补，如果该列权威缺失值就用0来填充。
+
+
+
+### 66、缩放和规范化
+
+**缩放**的核心思想是改变数值范围，但不改变分布的形状，它会把所有特征压缩到【0，1】区间或者把特征标准化成均值为0，方差为1。
+
+**规范化**改变数据分布，使其形状更接近正态分布。
+
+
+
+### 67、解析日期
+
+但最常见的是 `%d` 表示日，`%m` 表示月，%`y` 表示两位数年份，%`Y` 表示四位数年份。data.to_datetime(data.time  ,  format="%d/%m/%y")。当单列中有多种日期时，可以考虑自动推断日期，代码如下：data.to_datetime(data.time,infer_datetime_format=True)。
+
+日期数据数据有日期访问器 dt，使用如下：data.time.dt.day（访问天）
+
+
+
+### 68、pd.read_csv（）
+
+```python
+fifa_data = pd.read_csv(fifa_filepath, index_col="Date", parse_dates=True)
+
+```
+
+改代码会把日期列直接作为索引，并通过设置  parse_dates  参数自动解析时间序列。
+
+
+
+### 69、seaborn 画图（提高）
+
+#### 1、 折线图  sns.lineplot()
+
+有两种写法，一种是直接传入数据，此时默认把索引当作横轴，如果是一维数据则会生成从0开始的索引。另一种是传入 x 和  y（x指定横轴，y指定纵轴，data=df表示原始表格数据）。
+
+#### 2、条形图  sns.barplot（）
+
+```python
+sns.barplot(x=flight_data.index, y=flight_data['NK'])
+# 一个技巧就是，你可以通过指定x和y来绘制水平条形图和竖直条形图
+```
+
+#### 3、热力图  sns.heatmap（）
+
+```python
+sns.heatmap(data=flight_data, annot=True)  # 参数annot表示显示数值 
+```
+
+#### 4、散点图  sns.scatterplot（）和  sns.regplot（） 和  sns.lmplot（）和  sns.swarmplot（）
+
+```python
+# 干净的散点图
+sns.scatterplot(x=insurance_data['bmi'], y=insurance_data['charges'])
+
+# 带回归线的散点图，用于显示数据趋势
+sns.regplot(x=insurance_data['bmi'], y=insurance_data['charges'])
+
+# 带颜色编码的散点图
+sns.scatterplot(x=insurance_data['bmi'], y=insurance_data['charges'], hue=insurance_data['smoker'])
+
+# 带回归线的颜色编码散点图(每个列别都会拟合一条回归线)
+sns.lmplot(x="bmi", y="charges", hue="smoker", data=insurance_data)
+
+#分类散点图
+sns.swarmplot(x=insurance_data['smoker'],
+              y=insurance_data['charges'])
+```
+
+#### 5、分布图  sns.histplot（）和 sns.kdeplot（）
+
+```python
+# 直方图
+sns.histplot(iris_data['Petal Length (cm)'])
+
+# 核密度估计(平滑直方图)
+sns.kdeplot()
+
+# 颜色编码绘图
+sns.histplot(data=iris_data, x='Petal Length (cm)', hue='Species')
+
+sns.kdeplot(data=iris_data, x='Petal Length (cm)', hue='Species', shade=True)
+
+```
 
 
 
