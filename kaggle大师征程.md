@@ -723,7 +723,7 @@ sns.swarmplot(x=insurance_data['smoker'],
 # 直方图
 sns.histplot(iris_data['Petal Length (cm)'])
 
-# 核密度估计(平滑直方图)
+# 核密度估计(平滑直方图) 只能对连续数值使用。
 sns.kdeplot()
 
 # 颜色编码绘图
@@ -747,11 +747,33 @@ sns.kdeplot(data=iris_data, x='Petal Length (cm)', hue='Species', shade=True)
 
 
 
+### 72、OnehotEncoder
+
+`OneHotEncoder` 不会自动判断“这个列是不是分类变量”。它只要看到是数值，就直接当作**类别取值**。
 
 
 
+### 73、分箱操作（pd.cut和pd.qcut）
+
+首先会自动排序，然后划分区间，这是隐式完成的。
+
+pd.qcut() 自动分箱技术，使得每个区间的样本数大致相同。pd.qcut(data,q,labels)
+
+pd.cut()手动指定分箱区间，可以手动指定划分区间，pd.qcut(data,bins,q,labels)
 
 
+
+### 74、Stacking  （堆叠集成）
+
+把多个基础模型（即 estimators）的预测结果作为一个特征输入到一个“元模型”中，元模型来学习如何最优地融合这些预测。有属性 estimator 和estimator_，final_estimator和final_estimator _，其中没有下划线则表示 在定义阶段传入的原始模型或原始模型列表，而有下划线则表示训练后的模型对象或模型对象列表。
+
+若基础模型为复杂非线性模型，元模型采用线性回归或者岭回归；若基础模型较简单，则元模型可用非线性模型（如随机森林或GBDT）。
+
+
+
+### 75、MLP模型
+
+sklearn提供了MLPRegressor的接口，一般只需要配置hidden_layer_sizes=（a,b,c,..）也就是每一层的神经元数。
 
 
 
