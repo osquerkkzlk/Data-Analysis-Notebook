@@ -132,7 +132,7 @@ pd数据，data.round(2)表示保留两位小数。
 
 ### 12、tolist()
 
-data.tolist()会把series数据直接转换为列表，需要注意的是他只能转换一维数据。
+data.tolist()会把series数据直接转换为列表，需要注意的是他只能转换一维数据。一般用于index切片对象或者series数据。
 
 
 
@@ -850,6 +850,167 @@ def external_mean_encoding(base_df, ref_df, target_col, cols):
 
 
 
+### 81、自定义机器学习模型
+
+`BaseEstimator` 是所有 sklearn 模型的“骨架”类，用于规范接口。`RegressorMixin`是一个混入类，他会告诉sklearn你的模型是回归任务。所有sklearn的模型 fit（）方法都会返回一个self，也就是它本身。
+
+
+
+### 82、columns
+
+data.columns实际上得到是一个Index对象，支持切片。
+
+
+
+### 83、pd.concat()
+
+参数 `ignore_idnex=True`   表示忽略原索引，生成新的索引。
+
+
+
+### 84、==xgboost中的评估指标==
+
+参数 `objective`  作为训练目标（损失函数），xgboost用它来计算梯度以指导树的生长，会直接影响模型优化。而参数 `eval_metric` 在训练集或测试集上监控模型效果，用于打印日志、早停，并不会改变训练梯度，仅用于打印日志和监控。
+
+参数`evals` 要求接收DMatrix对象，并需要手动指定名字，用于xgboost的原生接口 train ，参数`eval_set` 接收np数据、pd数据或者其他sklearn兼容格式的数据，用于集成到skearn上，并且不需要设置名字。
+
+参数` early_stopping` 设置后，xgboost会有参数 best_iteration，表示最佳迭代次数。并且你可以在predict方法中设置 参数`iteration_range`=(0, model.best_iteration + 1)（右边界不包含），表示迭代的次数。这里有一个非常关键的误区，就是默认情况下 xgboost 会使用最后一轮的树去训练，但是此时可能不再是最优情况（因为你需要满足早停的多次条件，可能早已错过最优迭代轮数），因此我们需要截断后面相对糟糕的树，保留前面的树。
+
+方法`.plot_importance()` 会绘制出各个特征的重要性排名（默认降序）。其中，参数`max_num_features` 表示显示的最大特征数量，`importance_type` 表示重要性依据，一般选取gain即可，`show_values` 表示是否在条形图旁显示具体数值。
+
+
+
+### 85、Optuna（自动调参包）
+
+Optuna 的优化过程围绕四个主要对象展开：**Study**（研究）、**Trial**（试验）、**Sampler**（采样器）和 **Pruner**（剪枝器）。
+
+#### 1、objective
+
+objective虽然不是一个optuna类，但他是整个调参的核心，是我们定义的最大化或者最小化函数，接收一个Trial对象用于设置参数范围，返回一个标量值。
+
+#### 2、Trial
+
+Trial是目标函数的一次执行，它代表了一组特定的超参数配置和该配置下的性能结果，是 optuna 的核心接口，我们可以动态地定义超参数地搜索空间，每次 Study 迭代时，Sampler会根据历史信息，通过trial对象来建议（suggest）下一组要测试地超参数值。
+
+| **方法名**                                              | **类型** | **描述**                                                     | **示例**                                                  |
+| ------------------------------------------------------- | -------- | ------------------------------------------------------------ | --------------------------------------------------------- |
+| `suggest_float()`                                       | 浮点数   | 建议一个浮点数范围。可设置 `log=True` 进行对数尺度采样。     | `trial.suggest_float('lr', 1e-5, 1e-2, log=True)`         |
+| `suggest_int()`                                         | 整数     | 建议一个整数范围。可设置 `step` 步长。                       | `trial.suggest_int('num_layers', 2, 5)`                   |
+| `suggest_categorical()`                                 | 分类     | 建议从给定的列表中选择一个值。                               | `trial.suggest_categorical('optimizer', ['Adam', 'SGD'])` |
+| `suggest_loguniform()` / `suggest_float(..., log=True)` | 浮点数   | 在对数空间上均匀采样（Optuna 推荐使用 `suggest_float` 的 `log=True`）。 | `trial.suggest_float('alpha', 1e-10, 1e-2, log=True)`     |
+
+`trial.report(value, step)`：上报训练过程中的中间指标（例如每个 epoch 的验证 loss）。
+
+`if trial.should_prune(): raise optuna.TrialPruned()`：如果 pruner 判断应裁剪，就抛出该异常让 Optuna 处理（并记录 trial 状态为 PRUNED）。
+
+`trial.params`：字典形式的参数值。
+
+`trial.number`：该 trial 的编号（从 0 开始）。
+
+
+
+#### 3、Study
+
+Study是整个优化过程的容器，代表了一个完整的超参数优化任务，通过设置direction=“minimize”或者"maximize"确定优化方向，同时也绑定了 Sampler和Pruner算法。`study.optimize` 不会自动并行，需要显式使用 `n_jobs`（单进程可用）或并行启动多个进程/机器并共享 storage。
+
+```python
+import optuna
+
+# 1. 创建 Study 对象
+study = optuna.create_study(
+    direction='minimize',  # 目标是最小化目标函数返回的值（例如损失）
+    study_name='my_model_tuning',
+    # 可以指定 Sampler 和 Pruner，如不指定则使用默认值
+    sampler=optuna.samplers.TPESampler(),
+    pruner=optuna.pruners.MedianPruner(n_warmup_steps=5) 
+)
+
+# 2. 运行优化过程
+# 目标函数（objective）会被调用 n_trials 次
+study.optimize(objective, n_trials=100,callbacks=[...])
+```
+
+`study.best_trial`：最优 trial 对象（包含 params、value、user_attrs、intermediate_values...）。
+
+`study.best_params` / `study.best_value`：快捷获取最佳值。
+
+`study.trials`：trial 对象列表（内存中的）。
+
+`study.enqueue_trial(params)`：将固定参数组合放入队列（常用来先评估 baseline）。
+
+`study.set_user_attr(key, value)` / `study.user_attrs`：给 study 打标签/元信息（便于追溯）。
+
+`study.sampler` / `study.pruner`：当前 sampler/pruner 对象。
+
+
+
+#### 4、Sampler
+
+Sampler根据历史Trial地结果来指导下次 Trial 中如何选择超参数值，负责智能地搜索超参数空间。
+
+**常见算法：**
+
+- **`TPESampler` (Tree-structured Parzen Estimator, 默认)：** 基于贝叶斯优化，性能通常优于随机搜索。
+
+- **`CmaEsSampler`：** 适用于连续（非分类）超参数的高效算法。
+
+- **`RandomSampler`：** 执行随机搜索。
+
+- **`GridSampler`：** 执行网格搜索。
+
+  
+
+#### 5、Pruner
+
+Pruner负责在训练的早期自动终止（剪枝）那些看起来没有前途地Trial以节省时间。他需要目标函数在训练过程中通过trial.report()来定期报告中间结果，比较1当前trial和历史trial的性能来决定是否剪枝
+
+**常见算法：**
+
+- **`MedianPruner`：** 如果当前 Trial 的中间分数比该阶段所有已完成 Trial 的中间分数的**中位数**差，则剪枝。
+- **`SuccessiveHalvingPruner` (SH)**：高效的基于预算分配的剪枝算法。
+- **`HyperbandPruner`：** 结合了 SH 的更高级、更高效的版本。
+
+**注意**：要使用 pruner，`objective` 里必须调用 `trial.report()` 并检查 `trial.should_prune()`。
+
+
+
+#### 6、Callbacks（回调）
+
+在每个Trial结束或者失败时做额外动作（如进度条更新等）
+
+```python
+pbar=tqdm(total=1000)
+
+def logging_callback(study,trial):
+    pbar.update(1)
+    pbar.set_description(f"< Trial > {trial.number+1}/1000 , < Best Value > {study.best_value:5f}")
+
+```
+
+
+
+#### 7、可视化
+
+在study中写一个  storage  参数，把实时trial写入数据库文件中，`sqlite:///` 表示本地文件路径前缀表示本地文件路径，这个不能改，db.sqlite3表示数据库路径，这个可以改。之后在终端通过  optuna-dashboard sqlite:///db.sqlite3（用当前的数据库）获取本地web服务地址，在浏览器打开即可看到实时变化。
+
+```python
+study = optuna.create_study(
+    direction="minimize",
+    storage="sqlite:///db.sqlite3",  # 保存结果到 db.sqlite3 文件
+    load_if_exists=True               # 如果文件存在，就直接加载
+)
+```
+
+
+
+
+
+
+
+
+
+
+
 ## 2、项目心得
 
 ### 1、**预测外向还是内向**   竞赛
@@ -924,5 +1085,31 @@ for col in columns:
 
 ### 2、道路风险预测  竞赛
 
-1、在分析数据特征时，直接用全部的训练数据，没必要划分后用训练集。
+#### 1、感悟
 
+在分析数据特征时，直接用全部的训练数据，没必要划分后用训练集。
+
+#### 2、（大师一）==0.05548==
+
+==**broccoli beef**== 和 ==**Chris Deotte**== 提出了一种表格数据技术，即 “对残差的提升”（在另一个模型的预测结果上训练一个模型，以减小预测和原始结果的差异，这也是一种堆叠模型）。使用这种技术的前提是我们必须分析并确定特征和目标之间存在哪些模式，然后选择一个最能捕捉这些模式的模型，然后选择第二个不同的模型来堆叠另一个模型。
+
+在==**Chris Deotte**== 的笔记本中，他首先对测试数据添加了目标特征 `test['accident_risk'] = 0.5`,该特征仅仅用于占位，统一训练数据和测试数据的处理方法，方便特征工程，实际不会被用作预测。紧接着，他又对外部数据集 orig 添加了特征`orig['id'] = np.arange(len(orig))+test['id'].max()+1`,同样是用于占位。
+
+特征工程方面，首先根据数据的生成公式创建了一个按照原公式计算并且加入了略微噪声（模拟深度学习的作用）并被裁剪至01之间的指标。该指标是最初的  accident_risk 。裁剪代码如下，似乎需要很深的数学功底，先放一边吧，😂。之后用一个单元格查看了缺失值和分类列的类别值，并找到了数值特征和分类特征。我发现作者特别喜欢简洁，就是用一个单元格做多件事情并打印结果，这样更清晰，内容更紧凑。做完了这些事后，把数据拆分成训练集、测试集、外部数据集，并用外部数据集进行目标编码。
+
+```python
+def clip(f):
+    def clip_f(X):
+        sigma = 0.05
+        mu = f(X)
+        a, b = -mu/sigma, (1-mu)/sigma
+        Phi_a, Phi_b = scipy.stats.norm.cdf(a), scipy.stats.norm.cdf(b)
+        phi_a, phi_b = scipy.stats.norm.pdf(a), scipy.stats.norm.pdf(b)
+        return mu*(Phi_b-Phi_a)+sigma*(phi_a-phi_b)+1-Phi_b
+    return clip_f
+
+```
+
+最后，作者使用了xgboost的cv分数作为可靠证据，证明所做的确实有效，并显示了xgboost的各个特征重要性排名以及提交了csv文件，分数来到了 ==0.05548==。
+
+接下来，我将要复现该笔记本，并使用optuna技术找到xgboost的最佳参数。
