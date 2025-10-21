@@ -1011,7 +1011,7 @@ study = optuna.create_study(
 
 ### 87、自编码( AE )
 
-
+神经网络的输入和输出设置为同一份数据，让神经网络学习数据的结构，并在中间层压缩特征。
 
 
 
@@ -1030,6 +1030,33 @@ study = optuna.create_study(
 **四分位数**：Q1（25% 分位数）、Q2（中位数）、Q3（75% 分位数）。
 
 
+
+### 89、data.describe()
+
+用于描述数据，参数  include  默认为 None，表示只统计数值列，但是如果设置了 include=“all”，则表示统计所有的列。
+
+
+
+### 90、subplot（）和 subplots（）的对比
+
+plt.subplots（）表示一次性创建子图，而 plt.subplot（）表示创建一个子图。
+
+
+
+### 91、sns.countplot（）
+
+统计数据的出现的频数
+
+```python
+sns.countplot(y=cat_feature, data=train, order=train[cat_feature].value_counts().index)
+
+```
+
+
+
+### 92、barplot（）和histplot（）
+
+histplot（）关注数值分布，barplot（）关心不同类别下的目标值（默认是均值）对比，也就是说barplot（）底层实际上就是在做分组聚合然后调用 bar 来显示。
 
 
 
@@ -1119,6 +1146,7 @@ for col in columns:
 6. 另一种技术是PCA，尽管我之前已经使用过了，但是这次可以把维度控制在2左右。（有待尝试）。🤪
 7. 学习 AE（使用torch或者Keras），构造几个有价值的特征。（有待尝试）🤪
 8. 另一方面，你需要学习 t_SNE技术去可视化新得到的特征，如果该特征和标签映射之间展示了梯度关系，可以认为该特征确实有用。另一方面，也可以用这一技术去可视化  latent（模型内部对样本的一种“理解”或“嵌入形式”，它位于模型的中间层或内部状态。（有待尝试）。：）
+9. 我在大师一的笔记上做了一些特征工程，比如  IMP、PCA和AE，但是效果并不理想，以下是我对 AI 的总结，感觉可以在  kaggle 和 StackOverflow 上进行提问。首先，PCA 和 AE的核心目标在于尽可能重建输入数据而不是预测目标，也就是说虽然他们学习到的新特征在所有样本上重建误差较小，但是并不能代表目标方差也小，因为你在做这些事的时候并没有向他们提供目标值。换言之：PCA/AE提取的方向是数据 最稳定的方向，而目标函数不仅需要有稳定的数据，也需要有相对异常的数据去指导它。互信息MI只考虑了单变量与目标的相关性，并没有考虑特征之间的交互效应，当我们删除一些互信息但是组合起来是有价值的特征时，这会拉低模性能。
 
 
 
@@ -1146,3 +1174,38 @@ def clip(f):
 最后，作者使用了xgboost的cv分数作为可靠证据，证明所做的确实有效，并显示了xgboost的各个特征重要性排名以及提交了csv文件，分数来到了 ==0.05548==。
 
 接下来，我将要复现该笔记本，并使用optuna技术找到xgboost的最佳参数。
+
+#### 3、（大师二）
+
+我将学习 阿迪尔·沙米姆 的笔记本，这似乎是一个印度小哥，希望我能获得一些知识吧。🤪
+
+首先，他显示了目标的分布（histplot、kdeplot、boxplot），紧接着，作者显示了每个分类列中各个类别的占比情况以及对应的目标均值情况。总的来讲，让我知道了对于分类列，除了可以饼图刻画外，还可以这样做，而且目测效果也是非常不错的。还有一个小细节，就是作者通过调整 x 和 y来调整视图方向，这是很有价值的。
+
+```python
+# Analyze categorical variables
+for cat_feature in categorical_features:
+    plt.figure(figsize=(12, 6))
+    
+    # Distribution of categories
+    plt.subplot(1, 2, 1)
+    sns.countplot(y=cat_feature, data=train, order=train[cat_feature].value_counts().index)
+    plt.title(f'Distribution of {cat_feature}')
+    plt.xlabel('Count')
+    
+    # Average accident risk by category
+    plt.subplot(1, 2, 2)
+    category_risk = train.groupby(cat_feature)['accident_risk'].mean().sort_values(ascending=False).reset_index()
+    sns.barplot(x='accident_risk', y=cat_feature, data=category_risk)
+    plt.title(f'Average Accident Risk by {cat_feature}')
+    plt.xlabel('Average Accident Risk')
+    
+    plt.tight_layout()
+    plt.show()
+    
+    # Print unique values
+    print(f"\nUnique values of {cat_feature}: {train[cat_feature].nunique()}")
+    print(train[cat_feature].value_counts())
+```
+
+
+
