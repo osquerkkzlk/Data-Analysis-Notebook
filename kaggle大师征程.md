@@ -878,7 +878,9 @@ data.columns实际上得到是一个Index对象，支持切片。
 
 方法`.plot_importance()` 会绘制出各个特征的重要性排名（默认降序）。其中，参数`max_num_features` 表示显示的最大特征数量，`importance_type` 表示重要性依据，一般选取gain即可，`show_values` 表示是否在条形图旁显示具体数值。
 
+xgboost.train()的第一个参数 params 要求是字典，所以不需要解包
 
+evals 是 xgb 的原生评估集，eval_set是 skelarn风格的fit方法的评估集，作用相同，只是作用位置不同
 
 ### 85、Optuna（自动调参包）
 
@@ -1140,7 +1142,7 @@ model1 = CatBoostClassifier(
     save_snapshot=True,
     snapshot_file='snapshot.bkp',
     snapshot_interval=1，
-    'task_type='GPU''
+    task_type='GPU'
 )
 model1.fit(train_pool, eval_set=validation_pool, verbose=20)
 ```
