@@ -17,6 +17,8 @@
 11. pytorch 实战✔️
 12. 冲击  kaggle  大师
 13. torch  自然语言处理复习
+14. keras 复习
+15. torch复习
 
    ![ai学习](C:\Users\osquer\Desktop\typora图片\ai学习.png)
 
