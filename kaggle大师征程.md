@@ -1327,6 +1327,29 @@ Optuna 的 trial 是全局记录，而不区分模型，他会跟踪所有出现
 
 
 
+### 108、自回归和自编码
+
+自回归模型（如循环神经网络）的特点是从一个方向出发，依次预测未知词；而自编码模型（如 Bert）的特点是先破坏结构，再去预测被遮蔽词元。
+
+
+
+### 109、CrossEntropyLoss
+
+PyTorch 的 `nn.CrossEntropyLoss` 要求：
+
+1. **预测值 `input`** 是 **`float`**（通常是 `torch.float32`），shape `[N, C]`
+2. **标签 `target`** 是 **整数类型 `long`**，shape `[N]`
+
+
+
+### 110、register_buffer
+
+对于类来讲，下面的代码会起到这样的作用
+
+self.register_buffer('P', P)   # 不参与梯度，但会随模型保存
+
+
+
 ## 2、项目心得
 
 ### 1、**预测外向还是内向**   竞赛
